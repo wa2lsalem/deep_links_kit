@@ -1,0 +1,19 @@
+name: deep_links_kit_example
+description: Example app for deep_links_kit.
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  deep_links_kit:
+    path: ../
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+deep_links_kit:
+  hosts: [app.example.com]
+  scheme: myapp
