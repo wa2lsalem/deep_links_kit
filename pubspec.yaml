@@ -2,7 +2,7 @@ name: deep_links_kit
 description: >-
   One config for Android App Links and iOS Universal Links: a CLI that sets up
   the native projects and server files, plus router-agnostic link handling.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/wa2lsalem/deep_links_kit
 topics:
   - deep-linking
@@ -26,6 +26,3 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-
-executables:
-  deep_links_kit:

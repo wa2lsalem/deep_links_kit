@@ -1,3 +1,17 @@
+## 0.1.1
+
+- Route captures that decode to `/`, `?`, `#`, `\`, `.` or `..` no longer
+  match, so a crafted link cannot open a different in-app path.
+- `readyTimeout` now also covers `waitUntilReady`, and defaults to 30
+  seconds. A link that never gets ready no longer holds up later links.
+- The CLI reports malformed YAML, JSON or plist files and file errors as
+  failures instead of crashing, and rejects a non-boolean
+  `disable_flutter_deep_linking`.
+- Removed `executables` from the pubspec. Run the CLI with
+  `dart run deep_links_kit` from your app, which is unchanged.
+- The example is now a go_router app with a splash screen, explained file
+  by file in `example/example.md`.
+
 ## 0.1.0
 
 - `DeepLinksKit` runtime: route patterns, readiness waiting, ordered handling,

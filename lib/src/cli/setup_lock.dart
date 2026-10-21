@@ -41,8 +41,14 @@ class SetupLock {
     final json = jsonDecode(lock.readAsStringSync());
     if (json is! Map) return null;
     return SetupLock(
-      hosts: [for (final h in json['hosts'] as List? ?? const []) '$h'],
-      schemes: [for (final s in json['schemes'] as List? ?? const []) '$s'],
+      hosts: [
+        if (json['hosts'] case final List hosts)
+          for (final h in hosts) '$h',
+      ],
+      schemes: [
+        if (json['schemes'] case final List schemes)
+          for (final s in schemes) '$s',
+      ],
       disabledFlutterDeepLinking: json['disabled_flutter_deep_linking'] == true,
     );
   }

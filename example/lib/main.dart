@@ -1,21 +1,11 @@
-import 'package:deep_links_kit/deep_links_kit.dart';
 import 'package:flutter/material.dart';
 
-final navigatorKey = GlobalKey<NavigatorState>();
-
-final deepLinks = DeepLinksKit(
-  navigator: DeepLinkNavigator.named(navigatorKey),
-  hosts: {'app.example.com'},
-  schemes: {'myapp'},
-  routes: [
-    DeepLinkRoute('/p/:id', to: (match) => '/profile?id=${match['id']}'),
-  ],
-  fallback: (_) => '/',
-);
+import 'app_deep_links.dart';
+import 'app_router.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  deepLinks.init();
+  AppDeepLinks.instance.init(); // before runApp, so the launch link is kept
   runApp(const ExampleApp());
 }
 
@@ -24,40 +14,9 @@ class ExampleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: navigatorKey,
-      onGenerateRoute: (settings) {
-        final uri = Uri.parse(settings.name ?? '/');
-        final page = uri.path == '/profile'
-            ? ProfilePage(id: uri.queryParameters['id'] ?? '')
-            : const HomePage();
-        return MaterialPageRoute(builder: (_) => page, settings: settings);
-      },
-    );
-  }
-}
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Open myapp://p/42 to see a profile')),
-    );
-  }
-}
-
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key, required this.id});
-
-  final String id;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: Center(child: Text('Profile $id')),
+    return MaterialApp.router(
+      title: 'deep_links_kit',
+      routerConfig: AppRouter.router,
     );
   }
 }

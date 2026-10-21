@@ -24,7 +24,17 @@ files that must agree with each other, and then writing the same
   exists. The runtime waits for both.
 - The website files miss a path or a fingerprint. `doctor` finds it.
 
-## 1. Configure
+## 1. Install
+
+```sh
+flutter pub add deep_links_kit
+```
+
+Add it as a regular dependency of your app, not with
+`dart pub global activate`: your code imports the runtime classes, and
+`dart run deep_links_kit` runs the CLI from that same dependency.
+
+## 2. Configure
 
 Add a section to your app's `pubspec.yaml` (or put the same keys in a
 `deep_links_kit.yaml` file):
@@ -51,7 +61,7 @@ deep_links_kit:
 | `android.sha256` | Certificate fingerprints. |
 | `ios.team_id` / `ios.bundle_id` | Override the values read from `project.pbxproj`. |
 
-## 2. Run the CLI
+## 3. Run the CLI
 
 ```sh
 dart run deep_links_kit setup      # --dry-run to preview
@@ -87,15 +97,15 @@ run it in CI.
 > portal. Apple caches `apple-app-site-association` on its CDN, so changes
 > can take up to 24 hours (reinstall the app to retest).
 
-## 3. Handle links
+## 4. Handle links
 
 ```dart
+/// Completed by your splash once the first screen is open.
+final appReady = Completer<void>();
+
 final deepLinks = DeepLinksKit(
-  navigator: DeepLinkNavigator.custom(
-    push: router.push,
-    replace: router.go,
-  ),
-  waitUntilReady: () => session.load(),
+  navigator: DeepLinkNavigator.custom(push: router.push, replace: router.go),
+  waitUntilReady: () => appReady.future,
   routes: [
     DeepLinkRoute('/p/:id/:name?', to: (m) => '/profile/${m['id']}'),
     DeepLinkRoute('/share/:type/:id', to: (m) => switch (m['type']) {
@@ -106,8 +116,22 @@ final deepLinks = DeepLinksKit(
   fallback: (_) => '/home',
 );
 
-await deepLinks.init(); // as early as possible
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  deepLinks.init(); // as early as possible
+  runApp(const App());
+}
+
+// In your splash, after the session is loaded:
+context.go('/home');
+appReady.complete();
 ```
+
+Links that arrive before `appReady` completes, including the one that
+launched the app, wait and then open on top of the first screen, so Back
+returns to it. A link that waits longer than `readyTimeout` (30 seconds) is
+dropped and reported to `onError`. The [example](example/example.md) is
+a complete go_router app.
 
 ### Routers
 
@@ -139,6 +163,9 @@ path, so `myapp://p/42` and `https://app.example.com/p/42` both match `/p/:id`.
 Literal segments ignore letter case unless `caseSensitive: true`. Query
 parameters are available as `m.query`. Set `replace: true` on a route to
 replace the stack instead of pushing.
+
+Captured values are decoded, and safe to put in a path: a link whose value
+decodes to `/`, `?`, `#` or `..` (such as `/p/..%2Fadmin`) does not match.
 
 ### More
 

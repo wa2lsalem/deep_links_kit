@@ -69,6 +69,17 @@ void main() {
       expect(route.match(_link('https://e.com/other')), isNull);
     });
 
+    test('rejects captures that would change the in-app path', () {
+      final route = _route('/p/:id');
+      for (final id in ['..%2Fadmin', '42%3Fx=1', '42%23top', '..', '.']) {
+        expect(route.match(_link('https://e.com/p/$id')), isNull, reason: id);
+      }
+      expect(
+          _route('/docs/*').match(_link('https://e.com/docs/a%2Fb')), isNull);
+      expect(route.match(_link('https://e.com/p/%D8%B9%D9%84%D9%8A'))?['id'],
+          'علي');
+    });
+
     test('matches the root path', () {
       expect(_route('/').match(_link('https://e.com/')), isNotNull);
       expect(_route('/').match(_link('https://e.com/p')), isNull);

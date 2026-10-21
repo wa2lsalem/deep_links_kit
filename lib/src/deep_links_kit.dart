@@ -37,7 +37,7 @@ class DeepLinksKit {
     this.onLink,
     this.onError,
     DeepLinkSource? source,
-    this.readyTimeout = const Duration(seconds: 10),
+    this.readyTimeout = const Duration(seconds: 30),
     this.duplicateWindow = const Duration(seconds: 2),
   })  : routes = List.unmodifiable(routes),
         hosts = Set.unmodifiable(hosts.map((h) => h.toLowerCase())),
@@ -72,7 +72,9 @@ class DeepLinksKit {
   /// Receives errors; when `null`, errors go to [FlutterError.reportError].
   final DeepLinkErrorHandler? onError;
 
-  /// Maximum time to wait for [DeepLinkNavigator.isReady] per link.
+  /// Maximum time a link waits for [waitUntilReady] and
+  /// [DeepLinkNavigator.isReady] together. A link that times out is dropped
+  /// and reported to [onError], so later links are not held up.
   final Duration readyTimeout;
 
   /// Identical links received within this window are handled once.
@@ -145,8 +147,7 @@ class DeepLinksKit {
     try {
       final link = DeepLink.fromUri(uri);
       if (!accepts(link)) return onLink?.call(link, null);
-      await waitUntilReady?.call();
-      await _waitForNavigator();
+      await _waitForApp();
       final target = _resolveLink(link);
       onLink?.call(link, target);
       if (target == null) return;
@@ -158,8 +159,15 @@ class DeepLinksKit {
     }
   }
 
-  Future<void> _waitForNavigator() async {
+  Future<void> _waitForApp() async {
     final elapsed = Stopwatch()..start();
+    await waitUntilReady?.call().timeout(
+          readyTimeout,
+          onTimeout: () => throw TimeoutException(
+            'waitUntilReady did not complete',
+            readyTimeout,
+          ),
+        );
     while (!navigator.isReady) {
       if (elapsed.elapsed >= readyTimeout) {
         throw TimeoutException('Navigator was not ready', readyTimeout);

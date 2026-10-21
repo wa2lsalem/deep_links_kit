@@ -82,6 +82,10 @@ ios:
       );
       expect(() => parse('scheme: "1bad"'), throwsA(isA<CliException>()));
       expect(
+        () => parse('host: a.com\ndisable_flutter_deep_linking: "no"'),
+        throwsA(isA<CliException>()),
+      );
+      expect(
         () => parse('hosts: [a.com]\npaths: [share]'),
         throwsA(isA<CliException>()),
       );

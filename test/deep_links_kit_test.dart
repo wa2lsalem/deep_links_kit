@@ -119,6 +119,17 @@ void main() {
     expect(navigator.calls, isEmpty);
   });
 
+  test('drops a link when waitUntilReady never completes', () async {
+    final errors = <Object>[];
+    final handler = kit(
+      errors: errors,
+      waitUntilReady: () => Completer<void>().future,
+    );
+    await handler.handle(Uri.parse('https://e.com/p/1'));
+    expect(errors.single, isA<TimeoutException>());
+    expect(navigator.calls, isEmpty);
+  });
+
   test('handles links in order and keeps going after an error', () async {
     final errors = <Object>[];
     final handler = DeepLinksKit(

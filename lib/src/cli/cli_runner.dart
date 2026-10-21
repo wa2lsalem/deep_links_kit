@@ -67,6 +67,11 @@ Commands:
       logger.fail(error.message);
     } on StateError catch (error) {
       logger.fail(error.message);
+    } on FormatException catch (error) {
+      // Malformed YAML, JSON or plist; the message names the file position.
+      logger.fail('$error');
+    } on FileSystemException catch (error) {
+      logger.fail('$error');
     }
     _summary();
     return logger.failures > 0 ? 1 : 0;

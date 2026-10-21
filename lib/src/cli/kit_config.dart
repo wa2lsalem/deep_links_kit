@@ -88,7 +88,7 @@ class KitConfig {
       schemes: _list(yaml, 'schemes', single: 'scheme'),
       paths: _list(yaml, 'paths').ifEmpty(const ['/*']),
       disableFlutterDeepLinking:
-          yaml['disable_flutter_deep_linking'] as bool? ?? true,
+          _bool(yaml, 'disable_flutter_deep_linking') ?? true,
       androidPackage: android['package']?.toString(),
       sha256: _list(android, 'sha256'),
       iosTeamId: ios['team_id']?.toString(),
@@ -125,6 +125,12 @@ class KitConfig {
     if (value == null) return const {};
     if (value is Map) return value;
     throw CliException('`$key` must be a map');
+  }
+
+  static bool? _bool(Map<Object?, Object?> yaml, String key) {
+    final value = yaml[key];
+    if (value == null || value is bool) return value as bool?;
+    throw CliException('`$key` must be true or false, not "$value"');
   }
 
   static List<String> _list(

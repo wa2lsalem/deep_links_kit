@@ -13,6 +13,10 @@ typedef DeepLinkResolver = String? Function(DeepLinkMatch match);
 /// - `:name?`: an optional trailing capture.
 /// - `*`: captures every remaining segment into `match.rest`; must be last.
 ///
+/// A link does not match when a captured value contains `/`, `?`, `#` or
+/// `\` after decoding, or is `.` or `..`, so captures are safe to put in a
+/// path.
+///
 /// ```dart
 /// DeepLinkRoute('/p/:id/:name?', to: (m) => '/profile/${m['id']}');
 /// ```
@@ -47,6 +51,7 @@ class DeepLinkRoute {
       final segment = _segments[i];
       if (segment.isWildcard) {
         final rest = i < input.length ? input.sublist(i) : const <String>[];
+        if (!rest.every(_isSafe)) return null;
         return DeepLinkMatch(link: link, params: params, rest: rest);
       }
       if (i >= input.length) {
@@ -54,6 +59,7 @@ class DeepLinkRoute {
         return null;
       }
       if (segment.isParam) {
+        if (!_isSafe(input[i])) return null;
         params[segment.value] = input[i];
       } else if (!segment.matchesLiteral(input[i], caseSensitive)) {
         return null;
@@ -62,6 +68,12 @@ class DeepLinkRoute {
     if (input.length > _segments.length) return null;
     return DeepLinkMatch(link: link, params: params);
   }
+
+  /// Captured values end up inside in-app paths, so a value that decodes to
+  /// `/`, `?`, `#` or a dot segment (`%2F`, `%3F`, `..`) could open a
+  /// different page than the pattern allows. Such links do not match.
+  static bool _isSafe(String value) =>
+      value != '.' && value != '..' && !value.contains(RegExp(r'[/?#\\]'));
 
   @override
   String toString() => 'DeepLinkRoute($pattern)';
