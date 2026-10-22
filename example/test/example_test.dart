@@ -1,7 +1,8 @@
 import 'dart:io';
 
-import 'package:deep_links_kit/deep_links_kit.dart';
 import 'package:deep_links_kit_example/app.dart';
+import 'package:deep_links_kit_example/core/deep_links/app_deep_links.dart'
+    as go_router;
 import 'package:deep_links_kit_example/core/di/injection_container.dart';
 import 'package:deep_links_kit_example/features/home/presentation/pages/home_page.dart';
 import 'package:deep_links_kit_example/features/product_details/presentation/pages/product_details_page.dart';
@@ -16,7 +17,7 @@ void main() {
   testWidgets('go_router: a launch link waits for the splash, then opens '
       'over home', (tester) async {
     initDependencies();
-    final deepLinks = sl<DeepLinksKit>();
+    final deepLinks = go_router.deepLinks;
     await tester.pumpWidget(const App());
     deepLinks.handle(Uri.parse('myapp://products/42'));
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -81,7 +82,7 @@ void main() {
       multiLine: true,
       dotAll: true,
     ).allMatches(read('example.md')).toList();
-    expect(steps, hasLength(8));
+    expect(steps, hasLength(7));
     for (final step in steps) {
       expect(read(step[1]!), contains(step[2]!), reason: step[1]);
     }

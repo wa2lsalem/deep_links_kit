@@ -147,9 +147,22 @@ deepLinks.ready();
 ```
 
 Links wait until you call `ready()`, including the one that launched the
-app, and then open on top of the first screen, so Back returns to it. No
-splash? Call `ready()` right after `init()`. A link that waits longer than
-`readyTimeout` (30 seconds) is dropped and reported to `onError`.
+app, and then open on top of the first screen, so Back returns to it. A
+link that waits longer than `readyTimeout` (30 seconds) is dropped and
+reported to `onError`.
+
+No splash? Call `ready()` in `main` after the first frame. Before `runApp`
+is too early: the link would open before the router has built your first
+page, and Back would have nothing to return to.
+
+```dart
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  deepLinks.init();
+  runApp(const App());
+  WidgetsBinding.instance.addPostFrameCallback((_) => deepLinks.ready());
+}
+```
 
 Each route says where a link goes: `https://app.example.com/u/7` opens
 `/users/7`. `m['id']` is the `:id` part of the link. Return `null` from

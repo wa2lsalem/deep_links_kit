@@ -119,6 +119,13 @@ class DeepLinksKit {
   /// the end of your splash. Links that arrived earlier, including the one
   /// that launched the app, open on top of that screen, so Back returns to
   /// it. Calling it again has no effect. Not needed with [waitUntilReady].
+  ///
+  /// Without a splash, call it after the first frame, not before `runApp`:
+  ///
+  /// ```dart
+  /// runApp(const App());
+  /// WidgetsBinding.instance.addPostFrameCallback((_) => deepLinks.ready());
+  /// ```
   void ready() {
     if (!_ready.isCompleted) _ready.complete();
   }

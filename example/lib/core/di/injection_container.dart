@@ -1,6 +1,4 @@
-import 'package:deep_links_kit/deep_links_kit.dart';
 import 'package:get_it/get_it.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../features/home/data/datasources/home_remote_data_source.dart';
 import '../../features/home/data/repositories/home_repository_impl.dart';
@@ -22,18 +20,13 @@ import '../../features/splash/data/repositories/session_repository_impl.dart';
 import '../../features/splash/domain/repositories/session_repository.dart';
 import '../../features/splash/domain/usecases/load_session.dart';
 import '../../features/splash/presentation/cubit/splash_cubit.dart';
-import '../deep_links/app_deep_links.dart';
 import '../fake_api/fake_api.dart';
-import '../router/app_router.dart';
 
 final sl = GetIt.instance;
 
 void initDependencies() {
   // Core
-  sl
-    ..registerLazySingleton(FakeApi.new)
-    ..registerLazySingleton<GoRouter>(createRouter)
-    ..registerLazySingleton<DeepLinksKit>(() => createDeepLinks(sl()));
+  sl.registerLazySingleton(FakeApi.new);
 
   // Splash
   sl

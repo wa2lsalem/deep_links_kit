@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
-import 'core/di/injection_container.dart';
+import 'core/router/app_router.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -12,7 +11,7 @@ class App extends StatelessWidget {
       title: 'Shop',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorSchemeSeed: Colors.indigo),
-      routerConfig: sl<GoRouter>(),
+      routerConfig: router,
     );
   }
 }

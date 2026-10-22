@@ -1,6 +1,6 @@
 import 'package:deep_links_kit/deep_links_kit.dart';
-import 'package:go_router/go_router.dart';
 
+import '../router/app_router.dart';
 import '../router/app_routes.dart';
 
 /// The website domain, the same as `hosts` in `pubspec.yaml`. Shared links
@@ -11,8 +11,8 @@ const appLinksHost = 'app.example.com';
 Uri productShareLink(String id) =>
     Uri.https(appLinksHost, AppRoutes.product(id));
 
-/// All the deep link code of the app. Registered in `injection_container.dart`.
-DeepLinksKit createDeepLinks(GoRouter router) => DeepLinksKit(
+/// All the deep link code of the app.
+final deepLinks = DeepLinksKit(
   navigator: DeepLinkNavigator.custom(push: router.push, replace: router.go),
   routes: [
     // myapp://products opens the product list

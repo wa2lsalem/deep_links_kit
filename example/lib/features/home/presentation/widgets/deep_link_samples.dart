@@ -1,8 +1,7 @@
-import 'package:deep_links_kit/deep_links_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../../core/di/injection_container.dart';
+import '../../../../core/deep_links/app_deep_links.dart';
 
 /// Sample links. Tap one to open it as if it came from another app, or share
 /// a web link and tap it there.
@@ -26,7 +25,7 @@ class DeepLinkSamples extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.link),
             title: Text(link),
-            onTap: () => sl<DeepLinksKit>().handle(Uri.parse(link)),
+            onTap: () => deepLinks.handle(Uri.parse(link)),
             // WhatsApp and most apps only make web links tappable.
             trailing: link.startsWith('https://')
                 ? IconButton(

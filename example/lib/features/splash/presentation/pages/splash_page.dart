@@ -1,8 +1,8 @@
-import 'package:deep_links_kit/deep_links_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/deep_links/app_deep_links.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/router/app_routes.dart';
 import '../cubit/splash_cubit.dart';
@@ -18,7 +18,7 @@ class SplashPage extends StatelessWidget {
         listener: (context, state) {
           if (state is SplashDone) {
             context.go(AppRoutes.home);
-            sl<DeepLinksKit>().ready(); // links that arrived meanwhile open now
+            deepLinks.ready(); // links that arrived meanwhile open now
           }
         },
         child: const _SplashView(),

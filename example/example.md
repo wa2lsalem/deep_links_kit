@@ -4,7 +4,7 @@ A shop app with go_router, built with Clean Architecture: a splash, a home
 page, a product list and product details. Tap `myapp://products/42` and the
 app opens on that product after the splash, with Home under it so Back works.
 
-Only five places touch deep links. Using auto_route? Only two lines change,
+Four steps, the same as in the package README. Using auto_route? Only two lines change,
 see "Using auto_route" below.
 
 ## 1. `pubspec.yaml`: your links
@@ -67,10 +67,11 @@ second copy of your app, and the splash runs again.
 
 ## 2. `lib/core/deep_links/app_deep_links.dart`: links to pages
 
-All the deep link code of the app is in this file.
+All the deep link code of the app is in this file. `router` is your
+`GoRouter`, from `lib/core/router/app_router.dart`.
 
 ```dart
-DeepLinksKit createDeepLinks(GoRouter router) => DeepLinksKit(
+final deepLinks = DeepLinksKit(
   navigator: DeepLinkNavigator.custom(push: router.push, replace: router.go),
   routes: [
     // myapp://products opens the product list
@@ -94,27 +95,18 @@ DeepLinksKit createDeepLinks(GoRouter router) => DeepLinksKit(
   Back does not return to them. Without `fallback`, such links are ignored
   and the app stays where it is.
 
-## 3. `lib/core/di/injection_container.dart`: register it
-
-One `DeepLinksKit` for the whole app, next to the router it uses:
-
-```dart
-    ..registerLazySingleton<GoRouter>(createRouter)
-    ..registerLazySingleton<DeepLinksKit>(() => createDeepLinks(sl()));
-```
-
-## 4. `lib/main.dart`: start listening
+## 3. `lib/main.dart`: start listening
 
 ```dart
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   initDependencies();
-  sl<DeepLinksKit>().init(); // before runApp, so the launch link is kept
+  deepLinks.init(); // before runApp, so the launch link is kept
   runApp(const App());
 }
 ```
 
-## 5. `lib/features/splash/presentation/pages/splash_page.dart`: open waiting links
+## 4. `lib/features/splash/presentation/pages/splash_page.dart`: open waiting links
 
 Links wait until you call `ready()`, so they never open behind the splash.
 Call it right after the splash opens the first screen:
@@ -123,12 +115,26 @@ Call it right after the splash opens the first screen:
         listener: (context, state) {
           if (state is SplashDone) {
             context.go(AppRoutes.home);
-            sl<DeepLinksKit>().ready(); // links that arrived meanwhile open now
+            deepLinks.ready(); // links that arrived meanwhile open now
           }
         },
 ```
 
-No splash? Call `ready()` right after `init()`.
+**No splash?** Call `ready()` in `main`, after the first frame, so the link
+opens on top of your first page and Back returns to it:
+
+```dart
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  deepLinks.init();
+  runApp(const App());
+  // No splash: open links once the first page is on screen.
+  WidgetsBinding.instance.addPostFrameCallback((_) => deepLinks.ready());
+}
+```
+
+Don't call `ready()` before `runApp`: the link would open before the router
+has built your first page, and Back would have nothing to return to.
 
 That's it. The rest of the app is ordinary Clean Architecture and knows
 nothing about deep links:
@@ -138,15 +144,15 @@ lib/
   main.dart
   app.dart
   core/
-    deep_links/   the DeepLinksKit (step 2)
-    di/           get_it (step 3)
+    deep_links/   deepLinks (step 2)
+    di/           get_it, for the features' cubits and repositories
     router/       go_router and the page paths
     error/        exceptions and failures
     usecases/     the UseCase base class
     fake_api/     stands in for your backend
     widgets/      widgets more than one feature uses
   features/
-    splash/           data / domain / presentation (step 5)
+    splash/           data / domain / presentation (step 4)
     home/             data / domain / presentation
     product_list/     data / domain / presentation
     product_details/  data / domain / presentation

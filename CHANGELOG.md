@@ -2,7 +2,8 @@
 
 - **Breaking:** links now wait until you call `deepLinks.ready()`, usually at
   the end of your splash. This replaces the `Completer` you passed to
-  `waitUntilReady`. Without a splash, call `ready()` right after `init()`.
+  `waitUntilReady`. Without a splash, call it in `main` after the first
+  frame.
   `waitUntilReady` still works and replaces `ready()` when given.
 - Route captures that decode to `/`, `?`, `#`, `\`, `.` or `..` no longer
   match, so a crafted link cannot open a different in-app path.
