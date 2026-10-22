@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../app_deep_links.dart';
+import 'app_deep_links.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -21,7 +21,7 @@ class _SplashPageState extends State<SplashPage> {
     // Load the session, settings, etc.
     await Future<void>.delayed(const Duration(seconds: 1));
     if (!mounted) return;
-    context.go('/');
+    context.go('/home');
     AppDeepLinks.firstScreenOpened();
   }
 

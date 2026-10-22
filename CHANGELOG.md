@@ -9,8 +9,8 @@
   `disable_flutter_deep_linking`.
 - Removed `executables` from the pubspec. Run the CLI with
   `dart run deep_links_kit` from your app, which is unchanged.
-- The example is now a go_router app with a splash screen, explained file
-  by file in `example/example.md`.
+- The example shows go_router, Navigator and auto_route apps, explained step
+  by step in `example/example.md`.
 
 ## 0.1.0
 

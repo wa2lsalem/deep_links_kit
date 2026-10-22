@@ -1,13 +1,15 @@
+import 'package:deep_links_kit/deep_links_kit.dart';
 import 'package:flutter/material.dart';
 
-import '../app_deep_links.dart';
-
+/// The same home page in every example.
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, required this.deepLinks});
+
+  final DeepLinksKit deepLinks;
 
   static const _samples = [
-    'myapp://p/42',
-    'https://app.example.com/share/user/7',
+    'myapp://products/42',
+    'https://app.example.com/u/7',
     'https://app.example.com/unknown',
   ];
 
@@ -24,7 +26,7 @@ class HomePage extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.link),
               title: Text(link),
-              onTap: () => AppDeepLinks.instance.handle(Uri.parse(link)),
+              onTap: () => deepLinks.handle(Uri.parse(link)),
             ),
         ],
       ),

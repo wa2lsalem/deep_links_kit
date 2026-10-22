@@ -1,9 +1,9 @@
-# deep_links_kit with go_router
+# deep_links_kit example
 
-A complete app lives in this folder. These are the only parts that deal with
-deep links, file by file.
+When someone taps `https://app.example.com/products/42` (or `myapp://products/42`),
+your app opens on the product page. Four steps, about 30 lines of code.
 
-## 1. `pubspec.yaml`: the config
+## 1. `pubspec.yaml`: tell the package your links
 
 ```yaml
 deep_links_kit:
@@ -11,27 +11,22 @@ deep_links_kit:
   scheme: myapp
 ```
 
-## 2. Terminal: native and website setup
+## 2. Terminal: set up Android and iOS
 
 ```sh
-dart run deep_links_kit setup      # edits android/ and ios/
-dart run deep_links_kit generate   # files for https://app.example.com/.well-known/
-dart run deep_links_kit doctor     # checks everything
+dart run deep_links_kit setup
 ```
 
-## 3. `lib/app_deep_links.dart`: links to your routes
+That's all the native setup. You don't edit `AndroidManifest.xml` or
+`Info.plist` by hand.
 
-`AppDeepLinks.instance` maps each link to a go_router path. Links wait until
-`firstScreenOpened()` is called, so they never open behind the splash.
+## 3. `lib/with_go_router/app_deep_links.dart`: map links to pages
+
+One class for all deep link code. Each `DeepLinkRoute` says "a link like
+this opens that page". `:id` copies part of the link, so `/products/42`
+opens `/products/42` in the app.
 
 ```dart
-import 'dart:async';
-
-import 'package:deep_links_kit/deep_links_kit.dart';
-import 'package:flutter/foundation.dart';
-
-import 'app_router.dart';
-
 abstract final class AppDeepLinks {
   static final _firstScreen = Completer<void>();
 
@@ -41,92 +36,117 @@ abstract final class AppDeepLinks {
     if (!_firstScreen.isCompleted) _firstScreen.complete();
   }
 
-  static final instance = DeepLinksKit(
+  static final DeepLinksKit instance = DeepLinksKit(
+    // The only part that changes from one router to another.
     navigator: DeepLinkNavigator.custom(
       push: AppRouter.router.push,
       replace: AppRouter.router.go,
     ),
-    waitUntilReady: () => _firstScreen.future,
-    hosts: {'app.example.com'},
-    schemes: {'myapp'},
+    waitUntilReady: () => _firstScreen.future, // links wait for the splash
     routes: [
-      // https://app.example.com/p/42 and myapp://p/42
-      DeepLinkRoute('/p/:id', to: (m) => '/products/${m['id']}'),
+      // https://app.example.com/products/42 or myapp://products/42
+      DeepLinkRoute('/products/:id', to: (m) => '/products/${m['id']}'),
 
-      // https://app.example.com/share/user/7
-      DeepLinkRoute(
-        '/share/:type/:id',
-        to: (m) => switch (m['type']) {
-          'product' => '/products/${m['id']}',
-          'user' => '/users/${m['id']}',
-          _ => null, // unknown type: try the next route, then the fallback
-        },
-      ),
+      // https://app.example.com/u/7 opens the user page
+      DeepLinkRoute('/u/:id', to: (m) => '/users/${m['id']}'),
     ],
-    fallback: (_) => '/', // any other link opens the home page
-    onLink: (link, target) => debugPrint('$link -> $target'),
+    fallback: (_) => '/home', // any other link opens the home page
   );
 }
 ```
 
-## 4. `lib/main.dart`: start listening
+## 4. Start it and tell it when the app is ready
 
-Call `init()` before `runApp`, so the link that launched the app is kept.
+### `lib/main.dart`
 
 ```dart
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   AppDeepLinks.instance.init(); // before runApp, so the launch link is kept
-  runApp(const ExampleApp());
+  runApp(const GoRouterExample());
 }
 ```
 
-## 5. `lib/pages/splash_page.dart`: let waiting links open
+### `lib/with_go_router/splash_page.dart`
 
-After the splash opens the first screen, it calls `firstScreenOpened()`. A
-waiting link then opens on top of that screen, so Back returns to it.
+When the splash finishes, it opens the home page and then lets waiting
+links through. The link opens on top of home, so Back returns to home.
 
 ```dart
-  Future<void> _start() async {
-    // Load the session, settings, etc.
-    await Future<void>.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-    context.go('/');
+    context.go('/home');
     AppDeepLinks.firstScreenOpened();
-  }
 ```
 
-## 6. `lib/app_router.dart`: your router, unchanged
+Done. Run the app and tap the sample links on the home page.
 
-A plain `GoRouter`. Nothing in it is specific to deep links.
+---
+
+## Not using go_router?
+
+Keep the same `AppDeepLinks` class. Only `navigator:` and the line in the
+splash change.
+
+### Navigator (named routes)
+
+Run it: `flutter run -t lib/main_navigator.dart`
+
+### `lib/with_navigator/app_deep_links.dart`
 
 ```dart
-abstract final class AppRouter {
-  static final router = GoRouter(
-    initialLocation: '/splash',
-    routes: [
-      GoRoute(path: '/splash', builder: (_, _) => const SplashPage()),
-      GoRoute(path: '/', builder: (_, _) => const HomePage()),
-      GoRoute(
-        path: '/products/:id',
-        builder: (_, state) =>
-            DetailsPage('Product ${state.pathParameters['id']}'),
-      ),
-      GoRoute(
-        path: '/users/:id',
-        builder: (_, state) =>
-            DetailsPage('User ${state.pathParameters['id']}'),
-      ),
-    ],
-  );
-}
+    navigator: DeepLinkNavigator.named(AppRouter.navigatorKey),
 ```
 
-## Try it
+### `lib/main_navigator.dart`
 
-Run the app and tap the sample links on the home page, or send a real link:
+Give the same key to `MaterialApp`:
+
+```dart
+    return MaterialApp(
+      navigatorKey: AppRouter.navigatorKey,
+      onGenerateRoute: AppRouter.onGenerateRoute,
+    );
+```
+
+### `lib/with_navigator/splash_page.dart`
+
+```dart
+    Navigator.of(context).pushReplacementNamed('/home');
+    AppDeepLinks.firstScreenOpened();
+```
+
+### auto_route
+
+Run it: `flutter run -t lib/main_auto_route.dart`
+
+### `lib/with_auto_route/app_deep_links.dart`
+
+```dart
+    navigator: DeepLinkNavigator.custom(
+      push: AppRouter.instance.pushPath,
+      replace: AppRouter.instance.navigatePath,
+    ),
+```
+
+### `lib/with_auto_route/app_router.dart`
+
+The paths in your router are what `to:` returns:
+
+```dart
+    AutoRoute(page: HomeRoute.page, path: '/home'),
+    AutoRoute(page: ProductRoute.page, path: '/products/:id'),
+    AutoRoute(page: UserRoute.page, path: '/users/:id'),
+```
+
+### `lib/with_auto_route/screens.dart`
+
+```dart
+    context.router.replace(const HomeRoute());
+    AppDeepLinks.firstScreenOpened();
+```
+
+## Try a real link
 
 ```sh
-adb shell am start -a android.intent.action.VIEW -d "myapp://p/42"
-xcrun simctl openurl booted "myapp://p/42"
+adb shell am start -a android.intent.action.VIEW -d "myapp://products/42"
+xcrun simctl openurl booted "myapp://products/42"
 ```

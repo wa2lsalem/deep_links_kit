@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// The page a link opens, e.g. "Product 42".
 class DetailsPage extends StatelessWidget {
   const DetailsPage(this.title, {super.key});
 

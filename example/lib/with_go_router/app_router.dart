@@ -1,15 +1,18 @@
 import 'package:go_router/go_router.dart';
 
-import 'pages/details_page.dart';
-import 'pages/home_page.dart';
-import 'pages/splash_page.dart';
+import '../shared/details_page.dart';
+import '../shared/home_page.dart';
+import 'app_deep_links.dart';
+import 'splash_page.dart';
 
 abstract final class AppRouter {
   static final router = GoRouter(
-    initialLocation: '/splash',
     routes: [
-      GoRoute(path: '/splash', builder: (_, _) => const SplashPage()),
-      GoRoute(path: '/', builder: (_, _) => const HomePage()),
+      GoRoute(path: '/', builder: (_, _) => const SplashPage()),
+      GoRoute(
+        path: '/home',
+        builder: (_, _) => HomePage(deepLinks: AppDeepLinks.instance),
+      ),
       GoRoute(
         path: '/products/:id',
         builder: (_, state) =>
