@@ -3,12 +3,12 @@
 
 import 'package:flutter/material.dart';
 
-import 'with_auto_route/app_deep_links.dart';
 import 'with_auto_route/app_router.dart';
+import 'with_auto_route/deep_links.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  AppDeepLinks.instance.init(); // before runApp, so the launch link is kept
+  deepLinks.init(); // before runApp, so the link that opened the app is kept
   runApp(const AutoRouteExample());
 }
 
@@ -17,6 +17,6 @@ class AutoRouteExample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(routerConfig: AppRouter.instance.config());
+    return MaterialApp.router(routerConfig: router.config());
   }
 }

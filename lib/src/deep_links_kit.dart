@@ -21,6 +21,18 @@ typedef DeepLinkErrorHandler = void Function(Object error, StackTrace stack);
 /// Receives App Links, Universal Links and custom-scheme links, waits until
 /// the app is ready, and opens the matching in-app path.
 ///
+/// ```dart
+/// final deepLinks = DeepLinksKit(
+///   navigator: DeepLinkNavigator.custom(push: router.push, replace: router.go),
+///   routes: [
+///     DeepLinkRoute('/products/:id', to: (m) => '/products/${m['id']}'),
+///   ],
+/// );
+///
+/// deepLinks.init(); // in main, before runApp
+/// deepLinks.ready(); // in the splash, once the first screen is open
+/// ```
+///
 /// Links are handled one at a time, in the order they arrive. The same link
 /// arriving twice within [duplicateWindow] (as `app_links` does on a cold
 /// start) is handled once.
@@ -56,7 +68,7 @@ class DeepLinksKit {
   /// Whether a fallback path replaces the stack instead of pushing.
   final bool replaceOnFallback;
 
-  /// Awaited before each link is resolved, e.g. to load the user session.
+  /// Awaited before each link is resolved, instead of waiting for [ready].
   /// Should be cheap to call again once the app is ready.
   final Future<void> Function()? waitUntilReady;
 
@@ -72,7 +84,7 @@ class DeepLinksKit {
   /// Receives errors; when `null`, errors go to [FlutterError.reportError].
   final DeepLinkErrorHandler? onError;
 
-  /// Maximum time a link waits for [waitUntilReady] and
+  /// Maximum time a link waits for [ready] (or [waitUntilReady]) and
   /// [DeepLinkNavigator.isReady] together. A link that times out is dropped
   /// and reported to [onError], so later links are not held up.
   final Duration readyTimeout;
@@ -82,6 +94,7 @@ class DeepLinksKit {
 
   static const _pollInterval = Duration(milliseconds: 100);
 
+  final _ready = Completer<void>();
   DeepLinkSource? _source;
   StreamSubscription<Uri>? _subscription;
   Future<void> _queue = Future<void>.value();
@@ -100,6 +113,14 @@ class DeepLinksKit {
     } catch (error, stack) {
       _reportError(error, stack);
     }
+  }
+
+  /// Lets links open. Call it once the first screen is open, for example at
+  /// the end of your splash. Links that arrived earlier, including the one
+  /// that launched the app, open on top of that screen, so Back returns to
+  /// it. Calling it again has no effect. Not needed with [waitUntilReady].
+  void ready() {
+    if (!_ready.isCompleted) _ready.complete();
   }
 
   /// Handles [uri] as if it was received from the platform, e.g. a link
@@ -161,13 +182,16 @@ class DeepLinksKit {
 
   Future<void> _waitForApp() async {
     final elapsed = Stopwatch()..start();
-    await waitUntilReady?.call().timeout(
-          readyTimeout,
-          onTimeout: () => throw TimeoutException(
-            'waitUntilReady did not complete',
-            readyTimeout,
-          ),
-        );
+    final wait = waitUntilReady;
+    await (wait == null ? _ready.future : wait()).timeout(
+      readyTimeout,
+      onTimeout: () => throw TimeoutException(
+        wait == null
+            ? 'ready() was not called. Call it once your first screen is open.'
+            : 'waitUntilReady did not complete',
+        readyTimeout,
+      ),
+    );
     while (!navigator.isReady) {
       if (elapsed.elapsed >= readyTimeout) {
         throw TimeoutException('Navigator was not ready', readyTimeout);

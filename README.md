@@ -41,11 +41,19 @@ Add a section to your app's `pubspec.yaml` (or put the same keys in a
 
 ```yaml
 deep_links_kit:
-  hosts: [app.example.com]       # App Links / Universal Links
+  hosts: [app.example.com]       # https://app.example.com/... (App Links / Universal Links)
   scheme: myapp                  # myapp://... (optional)
-  paths: ["/share/*", "/p/*"]    # optional, defaults to "/*"
+```
+
+That is enough for most apps. Everything else is optional:
+
+```yaml
+deep_links_kit:
+  hosts: [app.example.com]
+  scheme: myapp
+  paths: ["/share/*", "/p/*"]    # only these links open the app, default "/*"
   android:
-    sha256:                      # for assetlinks.json and doctor
+    sha256:                      # only for `generate` and `doctor`
       - "2E:3B:...:4A:C8"
   ios:
     team_id: ABCDE12345          # read from the Xcode project if omitted
@@ -55,11 +63,18 @@ deep_links_kit:
 | --- | --- |
 | `hosts` / `host` | Web domains. `*.example.com` covers subdomains. |
 | `schemes` / `scheme` | Custom URL schemes. |
-| `paths` | Path globs on the hosts (`*` any characters, `?` one). |
+| `paths` | Path globs on the hosts (`*` any characters, `?` one). Set it when some pages of the site should stay in the browser. Used by `setup` (Android) and `generate` (iOS), so if your backend writes the website files, give it the same paths. |
 | `disable_flutter_deep_linking` | Default `true`. Keep it unless you let your router handle links itself. |
 | `android.package` | Overrides `applicationId` from Gradle (flavors). |
-| `android.sha256` | Certificate fingerprints. |
+| `android.sha256` | Certificate fingerprints, written to `assetlinks.json` and checked by `doctor`. |
 | `ios.team_id` / `ios.bundle_id` | Override the values read from `project.pbxproj`. |
+
+`android.sha256` and `ios.team_id` only feed the two website files
+(`assetlinks.json` and `apple-app-site-association`). `setup` never reads
+them. If your backend team writes and hosts those files, leave these keys out
+and send them the package name, SHA-256, Team ID and bundle ID instead.
+Without `android.sha256`, `generate` writes a placeholder to replace, and
+`doctor` lists the fingerprints it finds on the server for you to check.
 
 ## 3. Run the CLI
 
@@ -95,49 +110,63 @@ run it in CI.
 >
 > **Apple:** enable *Associated Domains* for the App ID in the Apple Developer
 > portal. Apple caches `apple-app-site-association` on its CDN, so changes
-> can take up to 24 hours (reinstall the app to retest).
+> can take up to 24 hours (reinstall the app to retest). See the FAQ for how
+> to check what Apple has.
+>
+> **iOS AppDelegate:** if your `AppDelegate` overrides
+> `application(_:continue:restorationHandler:)` or
+> `application(_:open:options:)`, return `super`'s result from it.
+> Otherwise links never reach Flutter.
 
 ## 4. Handle links
 
-```dart
-/// Completed by your splash once the first screen is open.
-final appReady = Completer<void>();
+Three steps: describe your links, start listening, and say when the app is
+ready.
 
+```dart
+// 1. lib/deep_links.dart
 final deepLinks = DeepLinksKit(
   navigator: DeepLinkNavigator.custom(push: router.push, replace: router.go),
-  waitUntilReady: () => appReady.future,
   routes: [
-    DeepLinkRoute('/p/:id/:name?', to: (m) => '/profile/${m['id']}'),
-    DeepLinkRoute('/share/:type/:id', to: (m) => switch (m['type']) {
-      'service' => '/services/${m['id']}',
-      _ => null, // let the next route or the fallback decide
-    }),
+    DeepLinkRoute('/products/:id', to: (m) => '/products/${m['id']}'),
+    DeepLinkRoute('/u/:id', to: (m) => '/users/${m['id']}'),
   ],
-  fallback: (_) => '/home',
+  fallback: (_) => '/home', // optional: links no route matches
 );
 
+// 2. lib/main.dart
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  deepLinks.init(); // as early as possible
+  deepLinks.init(); // before runApp, so the link that opened the app is kept
   runApp(const App());
 }
 
-// In your splash, after the session is loaded:
+// 3. In your splash, after the session is loaded:
 context.go('/home');
-appReady.complete();
+deepLinks.ready();
 ```
 
-Links that arrive before `appReady` completes, including the one that
-launched the app, wait and then open on top of the first screen, so Back
-returns to it. A link that waits longer than `readyTimeout` (30 seconds) is
-dropped and reported to `onError`. The [example](example/example.md) is
-a complete go_router app.
+Links wait until you call `ready()`, including the one that launched the
+app, and then open on top of the first screen, so Back returns to it. No
+splash? Call `ready()` right after `init()`. A link that waits longer than
+`readyTimeout` (30 seconds) is dropped and reported to `onError`.
+
+Each route says where a link goes: `https://app.example.com/u/7` opens
+`/users/7`. `m['id']` is the `:id` part of the link. Return `null` from
+`to:` to let the next route or the fallback decide.
+
+The [example](example/example.md) is a go_router shop app in Clean
+Architecture (splash, home, product list and details), plus a small
+auto_route app.
 
 ### Routers
 
 ```dart
 // go_router
 DeepLinkNavigator.custom(push: router.push, replace: router.go);
+
+// auto_route
+DeepLinkNavigator.custom(push: router.pushPath, replace: router.navigatePath);
 
 // Navigator 1.0 named routes
 DeepLinkNavigator.named(navigatorKey);
@@ -165,12 +194,15 @@ parameters are available as `m.query`. Set `replace: true` on a route to
 replace the stack instead of pushing.
 
 Captured values are decoded, and safe to put in a path: a link whose value
-decodes to `/`, `?`, `#` or `..` (such as `/p/..%2Fadmin`) does not match.
+decodes to `/`, `?`, `#`, `\`, `.` or `..` (such as `/p/..%2Fadmin`) does
+not match.
 
 ### More
 
 - `handle(uri)`: route a link from somewhere else, such as a push
   notification.
+- `waitUntilReady`: wait for your own future before each link, instead of
+  calling `ready()`.
 - `resolve(uri)`: get the `DeepLinkTarget` without navigating.
 - `hosts` / `schemes`: ignore links for other domains or schemes.
 - `onLink` / `onError`: logging and analytics hooks.
@@ -194,3 +226,13 @@ xcrun simctl openurl booted "https://app.example.com/p/1"
 
 On a real iPhone, tap the link from Notes or Messages. Typing it in Safari's
 address bar does not open the app.
+
+**I changed `apple-app-site-association`. Does Apple have the new one?**
+iPhones read the file from Apple's CDN, not from your server. Open
+`https://app-site-association.cdn-apple.com/a/v1/app.example.com` to see the
+copy they get. To test without waiting for the CDN, add
+`applinks:app.example.com?mode=developer` next to the existing entry in
+`Runner.entitlements`, turn on *Settings > Developer > Associated Domains
+Development* on the iPhone, and reinstall. The phone then reads the file
+from your server directly. Remove the line before you release; `setup` keeps
+entries it did not add, so it will not remove it for you.

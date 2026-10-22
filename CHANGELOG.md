@@ -1,5 +1,9 @@
 ## 0.1.1
 
+- **Breaking:** links now wait until you call `deepLinks.ready()`, usually at
+  the end of your splash. This replaces the `Completer` you passed to
+  `waitUntilReady`. Without a splash, call `ready()` right after `init()`.
+  `waitUntilReady` still works and replaces `ready()` when given.
 - Route captures that decode to `/`, `?`, `#`, `\`, `.` or `..` no longer
   match, so a crafted link cannot open a different in-app path.
 - `readyTimeout` now also covers `waitUntilReady`, and defaults to 30
@@ -9,8 +13,9 @@
   `disable_flutter_deep_linking`.
 - Removed `executables` from the pubspec. Run the CLI with
   `dart run deep_links_kit` from your app, which is unchanged.
-- The example shows go_router, Navigator and auto_route apps, explained step
-  by step in `example/example.md`.
+- The example is a go_router shop app in Clean Architecture (splash, home,
+  product list and details) plus a small auto_route app, explained step by
+  step in `example/example.md`.
 
 ## 0.1.0
 

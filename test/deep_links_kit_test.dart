@@ -58,7 +58,7 @@ void main() {
         schemes: schemes,
         readyTimeout: const Duration(milliseconds: 300),
         onError: (error, _) => errors?.add(error),
-      );
+      )..ready();
 
   test('pushes or replaces according to the route', () async {
     final handler = kit();
@@ -85,6 +85,36 @@ void main() {
     await handler.handle(Uri.parse('https://share.e.com/p/3'));
     await handler.handle(Uri.parse('myapp://p/4'));
     expect(navigator.calls, ['push /profile/3', 'push /profile/4']);
+  });
+
+  test('links wait until ready() is called', () async {
+    final handler = DeepLinksKit(
+      navigator: navigator,
+      source: _FakeSource(),
+      routes: _routes,
+    );
+    final pending = handler.handle(Uri.parse('https://e.com/p/1'));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(navigator.calls, isEmpty);
+    handler.ready();
+    handler.ready(); // a second call is harmless
+    await pending;
+    await handler.handle(Uri.parse('https://e.com/p/2'));
+    expect(navigator.calls, ['push /profile/1', 'push /profile/2']);
+  });
+
+  test('says ready() was not called when a link times out', () async {
+    final errors = <Object>[];
+    final handler = DeepLinksKit(
+      navigator: navigator,
+      source: _FakeSource(),
+      routes: _routes,
+      readyTimeout: const Duration(milliseconds: 100),
+      onError: (error, _) => errors.add(error),
+    );
+    await handler.handle(Uri.parse('https://e.com/p/1'));
+    expect(errors.single.toString(), contains('ready() was not called'));
+    expect(navigator.calls, isEmpty);
   });
 
   test('waits for readiness before resolving', () async {
@@ -140,7 +170,7 @@ void main() {
         DeepLinkRoute('/bad', to: (_) => throw StateError('boom')),
         DeepLinkRoute('/p/:id', to: (m) => '/profile/${m['id']}'),
       ],
-    );
+    )..ready();
     unawaited(handler.handle(Uri.parse('https://e.com/p/1')));
     unawaited(handler.handle(Uri.parse('https://e.com/bad')));
     await handler.handle(Uri.parse('https://e.com/p/2'));

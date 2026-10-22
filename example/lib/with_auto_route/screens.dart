@@ -1,9 +1,9 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 
-import '../shared/details_page.dart';
-import '../shared/home_page.dart';
-import 'app_deep_links.dart';
+import 'details_page.dart';
+import 'home_page.dart';
+import 'deep_links.dart';
 import 'app_router.gr.dart';
 
 @RoutePage()
@@ -26,7 +26,7 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future<void>.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     context.router.replace(const HomeRoute());
-    AppDeepLinks.firstScreenOpened();
+    deepLinks.ready(); // links that arrived meanwhile open now
   }
 
   @override
@@ -40,8 +40,7 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) =>
-      HomePage(deepLinks: AppDeepLinks.instance);
+  Widget build(BuildContext context) => HomePage(deepLinks: deepLinks);
 }
 
 @RoutePage()
